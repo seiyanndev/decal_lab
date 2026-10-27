@@ -1,0 +1,1266 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Decal Lab</title>
+<meta name="description" content="Decal Lab colors blank papercraft templates. Click a part to fill it, pick colors from your reference images, and print a colored PDF at the original size.">
+<!-- Decal Lab — papercraft template colorizer.
+     Open a blank template (PNG, JPG or a multi-page PDF), fill each part with one click,
+     pick exact colors from your reference images, and export a print-ready colored PDF or PNG.
+     The template itself is never altered: lines stay pixel-for-pixel as in the original file. -->
+
+<style>
+:root {
+  --bg: #f1f1ee; --panel: #ffffff; --line: #deded9; --text: #1d1f22; --muted: #6b6f76;
+  --accent: #2f5bd3; --accent-ink: #ffffff; --stage: #d6d6d2; --hover: #f0f0ec; --danger: #c8202f;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #15171a; --panel: #1e2125; --line: #2f3339; --text: #e7e8ea; --muted: #9aa0a8;
+    --accent: #6b8fff; --accent-ink: #0d1020; --stage: #0e0f11; --hover: #272a30; --danger: #ff6b6b;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #15171a; --panel: #1e2125; --line: #2f3339; --text: #e7e8ea; --muted: #9aa0a8;
+  --accent: #6b8fff; --accent-ink: #0d1020; --stage: #0e0f11; --hover: #272a30; --danger: #ff6b6b;
+}
+* { box-sizing: border-box; }
+html, body { height: 100%; margin: 0; }
+body {
+  background: var(--bg); color: var(--text);
+  font: 13px/1.4 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  display: grid; grid-template-rows: 48px 1fr 28px; overflow: hidden;
+}
+button, select, input { font: inherit; color: inherit; }
+button {
+  background: var(--panel); border: 1px solid var(--line); border-radius: 6px;
+  padding: 5px 10px; cursor: pointer;
+}
+button:hover:not(:disabled) { background: var(--hover); }
+button:disabled { opacity: .45; cursor: default; }
+button.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+select, input[type=text], input[type=number] {
+  background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 4px 6px; min-width: 0;
+}
+input[type=range] { width: 100%; accent-color: var(--accent); }
+input[type=checkbox] { accent-color: var(--accent); }
+
+header {
+  display: flex; align-items: center; gap: 8px; padding: 0 12px;
+  background: var(--panel); border-bottom: 1px solid var(--line);
+}
+header h1 { font-size: 14px; margin: 0; font-weight: 650; letter-spacing: .2px; white-space: nowrap; }
+header .tagline { color: var(--muted); font-size: 12px; margin-right: 12px; white-space: nowrap; }
+#empty .box p { margin: 0 0 14px; max-width: 340px; }
+@media (max-width: 1100px) { header .tagline { display: none; } }
+header .spacer { flex: 1; }
+
+main { display: grid; grid-template-columns: 52px 1fr 300px; min-height: 0; }
+
+#tools {
+  background: var(--panel); border-right: 1px solid var(--line);
+  display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 8px 0;
+}
+#tools button { width: 38px; height: 38px; padding: 0; display: grid; place-items: center; border-color: transparent; }
+#tools button.on { background: var(--accent); color: var(--accent-ink); }
+#tools svg { width: 20px; height: 20px; }
+#tools hr { width: 28px; border: 0; border-top: 1px solid var(--line); margin: 4px 0; }
+#curColor {
+  width: 32px; height: 32px; border-radius: 6px; border: 2px solid var(--line); margin-top: 6px; cursor: pointer;
+}
+
+#viewport { position: relative; overflow: hidden; background: var(--stage); touch-action: none; }
+#stage { position: absolute; left: 0; top: 0; transform-origin: 0 0; background: #fff; box-shadow: 0 2px 18px rgba(0,0,0,.25); }
+#stage canvas { position: absolute; left: 0; top: 0; }
+#lineCanvas { mix-blend-mode: multiply; pointer-events: none; }
+#stage.pixelated canvas { image-rendering: pixelated; }
+#brushCursor {
+  position: absolute; pointer-events: none; border: 1px solid #000; border-radius: 50%;
+  box-shadow: 0 0 0 1px #fff; display: none; transform: translate(-50%, -50%);
+}
+#empty {
+  position: absolute; inset: 0; display: grid; place-items: center; text-align: center; color: var(--muted);
+}
+#empty .box { border: 2px dashed var(--line); border-radius: 12px; padding: 36px 44px; background: var(--panel); }
+#empty .box b { display: block; font-size: 15px; color: var(--text); margin-bottom: 6px; }
+#viewport.dragover #empty .box { border-color: var(--accent); }
+
+aside {
+  background: var(--panel); border-left: 1px solid var(--line); overflow-y: auto; min-height: 0;
+}
+section { padding: 12px 14px; border-bottom: 1px solid var(--line); }
+section h2 {
+  font-size: 11px; text-transform: uppercase; letter-spacing: .6px; color: var(--muted); margin: 0 0 8px; font-weight: 600;
+}
+.row { display: flex; align-items: center; gap: 6px; margin: 6px 0; }
+.row label { flex: 1; }
+.row .val { color: var(--muted); font-variant-numeric: tabular-nums; min-width: 42px; text-align: right; }
+.hint { color: var(--muted); font-size: 12px; margin: 4px 0; }
+
+#colorRow { display: flex; gap: 8px; align-items: center; }
+#colorInput { width: 40px; height: 32px; padding: 0; border: 1px solid var(--line); border-radius: 6px; background: none; }
+#hexInput { width: 90px; font-family: ui-monospace, Consolas, monospace; }
+.swatches { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 8px; }
+.swatch {
+  width: 24px; height: 24px; border-radius: 5px; border: 1px solid rgba(0,0,0,.2); cursor: pointer; padding: 0;
+}
+.swatch.on { outline: 2px solid var(--accent); outline-offset: 1px; }
+.swatch.add { display: grid; place-items: center; background: var(--panel); border: 1px dashed var(--muted); color: var(--muted); }
+
+.pages { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; max-height: 300px; overflow-y: auto; padding: 2px; }
+.pg { position: relative; padding: 3px; display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.pg canvas { width: 100%; height: auto; display: block; border: 1px solid var(--line); background: #fff; }
+.pg span { font-size: 11px; color: var(--muted); }
+.pg.on { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+.pg.on span { color: var(--accent); font-weight: 600; }
+.pg.touched::after {
+  content: ""; position: absolute; top: 6px; right: 6px; width: 8px; height: 8px; border-radius: 50%;
+  background: var(--accent); box-shadow: 0 0 0 2px var(--panel);
+}
+#refWrap {
+  position: relative; height: 260px; min-height: 120px; resize: vertical; overflow: hidden;
+  border: 1px solid var(--line); border-radius: 8px; background: var(--stage);
+}
+#refCanvas { width: 100%; height: 100%; display: block; cursor: crosshair; touch-action: none; }
+#refWrap.dragover { outline: 2px solid var(--accent); }
+#refEmpty { position: absolute; inset: 0; display: grid; place-items: center; color: var(--muted); text-align: center; padding: 12px; pointer-events: none; }
+#refHover {
+  position: absolute; right: 6px; bottom: 6px; padding: 3px 6px 3px 3px; border-radius: 6px; display: none;
+  background: var(--panel); border: 1px solid var(--line); font: 11px ui-monospace, Consolas, monospace;
+  align-items: center; gap: 5px; pointer-events: none;
+}
+#refHover i { width: 16px; height: 16px; border-radius: 4px; display: inline-block; border: 1px solid rgba(0,0,0,.2); }
+
+footer {
+  display: flex; align-items: center; gap: 16px; padding: 0 12px; color: var(--muted);
+  background: var(--panel); border-top: 1px solid var(--line); font-size: 12px; white-space: nowrap; overflow: hidden;
+}
+
+#busy {
+  position: fixed; inset: 0; background: rgba(0,0,0,.35); display: none; place-items: center; z-index: 50;
+}
+#busy div { background: var(--panel); padding: 14px 20px; border-radius: 10px; box-shadow: 0 6px 30px rgba(0,0,0,.3); }
+#toast {
+  position: fixed; left: 50%; bottom: 44px; transform: translateX(-50%); z-index: 60;
+  background: var(--text); color: var(--bg); padding: 8px 14px; border-radius: 8px; opacity: 0;
+  transition: opacity .2s; pointer-events: none; max-width: 80vw;
+}
+#toast.show { opacity: 1; }
+
+#exportMenu {
+  position: absolute; right: 12px; top: 44px; z-index: 40; width: 260px; display: none;
+  background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 12px;
+  box-shadow: 0 8px 30px rgba(0,0,0,.2);
+}
+#exportMenu.open { display: block; }
+#exportMenu button { width: 100%; margin: 4px 0; text-align: left; }
+dialog { background: var(--panel); color: var(--text); border: 1px solid var(--line); border-radius: 10px; }
+dialog::backdrop { background: rgba(0,0,0,.35); }
+
+@media (max-width: 820px) {
+  body { grid-template-rows: auto 1fr 28px; }
+  header { flex-wrap: wrap; padding: 6px 16px; }
+  main { grid-template-columns: 52px 1fr; grid-template-rows: 1fr 45%; }
+  aside { grid-column: 1 / -1; border-left: 0; border-top: 1px solid var(--line); }
+}
+</style>
+</head>
+<body>
+<header>
+  <h1>Decal Lab</h1>
+  <span class="tagline">Color your papercraft templates</span>
+  <button id="openTpl" class="primary">Open template</button>
+  <button id="openRef">Open reference</button>
+  <button id="undoBtn" title="Undo (Ctrl+Z)" disabled>Undo</button>
+  <button id="redoBtn" title="Redo (Ctrl+Y)" disabled>Redo</button>
+  <button id="fitBtn" title="Fit to screen (0)">Fit</button>
+  <span class="spacer"></span>
+  <button id="exportBtn" class="primary" disabled>Export</button>
+  <input type="file" id="tplFile" accept="image/*,application/pdf" hidden>
+  <input type="file" id="refFile" accept="image/*" hidden>
+  <div id="exportMenu">
+    <div class="row" id="paperRow"><label for="paper">Paper size</label>
+      <select id="paper">
+        <option value="a4">A4</option><option value="letter">Letter</option><option value="a3">A3</option>
+      </select>
+    </div>
+    <button id="expPdf">Colored PDF (print-ready)</button>
+    <button id="expPng">Colored PNG of this page</button>
+    <p class="hint" id="paperHint"></p>
+  </div>
+</header>
+
+<main>
+  <nav id="tools">
+    <button data-tool="fill" title="Fill part (F)&#10;Ctrl-click: flip the fold-line setting&#10;Alt-click: pick color"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M5 11l7-7 7 7-7 7z"/><path d="M5 11h14"/><path d="M20 15c0 0-1.5 2-1.5 3a1.5 1.5 0 003 0c0-1-1.5-3-1.5-3z" fill="currentColor"/></svg></button>
+    <button data-tool="unfill" title="Clear part color (U)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M5 11l7-7 7 7-7 7z"/><path d="M16 16l5 5M21 16l-5 5"/></svg></button>
+    <button data-tool="replace" title="Replace this color everywhere (R)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9h13l-3-3M20 15H7l3 3"/></svg></button>
+    <hr>
+    <button data-tool="brush" title="Brush (B), for details the template doesn't outline"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 4L10 14"/><path d="M10 14c-2-1-5 0-5 3 0 2-1 3-2 3 3 1 7 0 8-3"/></svg></button>
+    <button data-tool="eraser" title="Eraser (E)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M4 15l9-9 6 6-9 9H7z"/><path d="M9 10l6 6M10 21h10"/></svg></button>
+    <hr>
+    <button data-tool="pick" title="Pick a color from the template (I)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 6l4 4M4 20l2-1 9-9-3-3-9 9z"/><path d="M15 5l2-2 4 4-2 2"/></svg></button>
+    <button data-tool="hand" title="Pan (H), or hold Space"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 13V6a1.5 1.5 0 013 0v5M11 11V4.5a1.5 1.5 0 013 0V11M14 11V6a1.5 1.5 0 013 0v7c0 4-2.5 7-6 7-2.5 0-4-1.5-5.5-3.5L3.8 13.6a1.5 1.5 0 012.5-1.6L8 14"/></svg></button>
+    <div id="curColor" title="Current color"></div>
+  </nav>
+
+  <div id="viewport">
+    <div id="stage">
+      <canvas id="colorCanvas"></canvas>
+      <canvas id="lineCanvas"></canvas>
+    </div>
+    <div id="brushCursor"></div>
+    <div id="empty"><div class="box"><b>Welcome to Decal Lab</b><p>Color blank papercraft templates. Click a part to fill it, pick colors from your reference images, and print the result at its original size.</p><p>Drop a template here: PNG, JPG or a PDF with any number of pages.</p><button id="emptyOpen" class="primary">Open template</button></div></div>
+  </div>
+
+  <aside>
+    <section id="pagesSec" hidden>
+      <h2>Pages <span id="pageInfo" style="float:right"></span></h2>
+      <div class="pages" id="pageList"></div>
+    </section>
+    <section>
+      <h2>Color</h2>
+      <div id="colorRow">
+        <input type="color" id="colorInput" value="#1f4fa8">
+        <input type="text" id="hexInput" value="#1F4FA8" spellcheck="false" aria-label="Hex color">
+        <button id="addSwatch" title="Add to palette">Add</button>
+      </div>
+      <div class="swatches" id="palette"></div>
+      <div class="hint">Click a swatch to use it. Right-click a swatch to remove it.</div>
+      <div class="row" style="margin-top:10px">
+        <select id="savedPalettes" style="flex:1"><option value="">Saved palettes…</option></select>
+        <button id="loadPal">Load</button>
+        <button id="delPal" title="Delete saved palette">✕</button>
+      </div>
+      <div class="row">
+        <input type="text" id="palName" placeholder="Palette name, e.g. RX-78-2" style="flex:1">
+        <button id="savePal">Save</button>
+      </div>
+      <div class="hint" id="recentLabel" style="margin-top:8px">Recently used</div>
+      <div class="swatches" id="recent"></div>
+    </section>
+
+    <section>
+      <h2>Reference</h2>
+      <div id="refWrap">
+        <canvas id="refCanvas"></canvas>
+        <div id="refEmpty">Drop or paste a reference image here.<br>Click it to pick a color.</div>
+        <div id="refHover"><i></i><span></span></div>
+      </div>
+      <div class="row">
+        <button id="refFit">Fit</button>
+        <button id="refExtract" style="flex:1">Extract palette from image</button>
+      </div>
+      <div class="hint">Scroll to zoom, drag to pan, click to pick a color.</div>
+    </section>
+
+    <section>
+      <h2>Fill</h2>
+      <div class="row"><input type="checkbox" id="stopFolds" checked><label for="stopFolds">Stop at fold lines</label></div>
+      <div class="hint">Turn this off to fill a whole part across its fold lines in one click. Ctrl-click does the opposite of this setting.</div>
+      <div class="row"><label for="gap">Close gaps in outlines</label><span class="val" id="gapVal">0 px</span></div>
+      <input type="range" id="gap" min="0" max="4" step="1" value="0">
+      <div class="row"><label for="brushSize">Brush size</label><span class="val" id="brushVal">24 px</span></div>
+      <input type="range" id="brushSize" min="2" max="300" value="24">
+      <div class="row"><label for="brushMode">Brush stays</label>
+        <select id="brushMode">
+          <option value="part">Inside the part</option>
+          <option value="lines">Inside the lines it touches</option>
+          <option value="free">Anywhere</option>
+        </select>
+      </div>
+      <div class="hint">"Inside the lines it touches" never paints across a line, so you can paint into narrow corners and strips without spilling.</div>
+      <div class="hint" id="detectInfo"></div>
+    </section>
+  </aside>
+</main>
+
+<footer>
+  <span id="stSize">No template loaded</span>
+  <span id="stZoom"></span>
+  <span id="stPos"></span>
+</footer>
+
+<div id="busy"><div id="busyText">Processing…</div></div>
+<div id="toast"></div>
+
+<script>
+'use strict';
+const $ = s => document.querySelector(s);
+
+// ---------- state ----------
+const st = {
+  name: 'template',
+  src: null,               // canvas holding the original template
+  W: 0, H: 0, N: 0,
+  B: null,                 // blurred ink, used to find part edges
+  ink: null, inkMax: null, // raw ink and its 3x3 max
+  split: 80, foldMean: 55, outlineMean: 110, hasFolds: true,
+  pdf: null, image: null,  // PDF document, or the single loaded image
+  pages: [], page: -1,     // per page: thumbnail, stashed colors and undo history
+  mask: null, maskBB: null,
+  walls: null, wallsKey: '',
+  colorData: null, c32: null,
+  tool: 'fill', color: '#1f4fa8',
+  undo: [], redo: [], undoBytes: 0, dirty: false,
+  view: { x: 0, y: 0, z: 1 },
+  palette: [], recent: [],
+};
+const UNDO_LIMIT = 450 * 1024 * 1024;
+
+const viewport = $('#viewport'), stage = $('#stage');
+const colorCanvas = $('#colorCanvas'), lineCanvas = $('#lineCanvas');
+let colorCtx = null;
+
+// ---------- small helpers ----------
+const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
+function toast(msg, ms = 2600) {
+  const t = $('#toast'); t.textContent = msg; t.classList.add('show');
+  clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.remove('show'), ms);
+}
+async function busy(text, fn) {
+  $('#busyText').textContent = text; $('#busy').style.display = 'grid';
+  await new Promise(r => requestAnimationFrame(() => setTimeout(r, 20)));
+  try { return await fn(); }
+  catch (e) { console.error(e); toast('Something went wrong: ' + e.message, 5000); }
+  finally { $('#busy').style.display = 'none'; }
+}
+function hexToRgb(h) {
+  h = h.replace('#', '');
+  if (h.length === 3) h = h.split('').map(c => c + c).join('');
+  const n = parseInt(h, 16); return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+}
+const rgbToHex = (r, g, b) => '#' + [r, g, b].map(v => Math.round(v).toString(16).padStart(2, '0')).join('').toUpperCase();
+const pack = (r, g, b) => ((255 << 24) | (b << 16) | (g << 8) | r) >>> 0;
+const lsGet = (k, d) => { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch { return d; } };
+const lsSet = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} };
+function loadScript(src) {
+  return new Promise((res, rej) => {
+    if (document.querySelector(`script[src="${src}"]`)) return res();
+    const s = document.createElement('script'); s.src = src; s.onload = res;
+    s.onerror = () => rej(new Error('could not load ' + src + ' (are you offline?)'));
+    document.head.appendChild(s);
+  });
+}
+function download(blob, name) {
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name;
+  document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+}
+
+// ---------- loading ----------
+async function fileToCanvas(file) {
+  const url = URL.createObjectURL(file);
+  try {
+    const img = new Image(); img.src = url; await img.decode();
+    const c = document.createElement('canvas'); c.width = img.naturalWidth; c.height = img.naturalHeight;
+    const x = c.getContext('2d'); x.fillStyle = '#fff'; x.fillRect(0, 0, c.width, c.height); x.drawImage(img, 0, 0);
+    return c;
+  } finally { URL.revokeObjectURL(url); }
+}
+
+const PDF_DPI = 300, THUMB_W = 150;
+async function loadPdf(file) {
+  const base = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/';
+  await loadScript(base + 'pdf.min.js');
+  pdfjsLib.GlobalWorkerOptions.workerSrc = base + 'pdf.worker.min.js';
+  return pdfjsLib.getDocument({ data: await file.arrayBuffer() }).promise;
+}
+async function renderPdfPage(n, scale) {
+  const page = await st.pdf.getPage(n);
+  const vp = page.getViewport({ scale });
+  const c = document.createElement('canvas'); c.width = Math.round(vp.width); c.height = Math.round(vp.height);
+  const x = c.getContext('2d'); x.fillStyle = '#fff'; x.fillRect(0, 0, c.width, c.height);
+  await page.render({ canvasContext: x, viewport: vp }).promise;
+  return c;
+}
+function scaledCopy(src, w) {
+  const c = document.createElement('canvas'); c.width = w; c.height = Math.max(1, Math.round(src.height * w / src.width));
+  const x = c.getContext('2d'); x.imageSmoothingQuality = 'high'; x.drawImage(src, 0, 0, c.width, c.height);
+  return c;
+}
+// full-resolution page image: PDF pages are re-rendered on demand so only the open page sits in memory
+function pageSource(i) {
+  return st.pdf ? renderPdfPage(st.pages[i].num, PDF_DPI / 72) : Promise.resolve(st.image);
+}
+
+async function openTemplate(file) {
+  if (!file) return;
+  if (st.dirty && !confirm('Open a new template? Your coloring on the current one will be lost unless you exported it.')) return;
+  const isPdf = file.type === 'application/pdf' || /\.pdf$/i.test(file.name);
+  let pages = [], pdf = null, image = null;
+  const ok = await busy('Opening…', async () => {
+    if (isPdf) {
+      pdf = await loadPdf(file);
+      st.pdf = pdf;
+      for (let n = 1; n <= pdf.numPages; n++) {
+        $('#busyText').textContent = `Loading page ${n} of ${pdf.numPages}…`;
+        const vp = (await pdf.getPage(n)).getViewport({ scale: 1 });
+        const base = await renderPdfPage(n, THUMB_W / vp.width);
+        pages.push({ num: n, ptW: vp.width, ptH: vp.height, base, color: null, undo: [], redo: [], touched: false });
+      }
+    } else {
+      image = await fileToCanvas(file);
+      pages.push({ num: 1, base: scaledCopy(image, THUMB_W), color: null, undo: [], redo: [], touched: false });
+    }
+    return true;
+  });
+  if (!ok) return;
+  st.name = file.name.replace(/\.[^.]+$/, '') || 'template';
+  st.pdf = pdf; st.image = image; st.pages = pages; st.page = -1;
+  renderPageList();
+  await showPage(0);
+  $('#empty').style.display = 'none';
+  $('#exportBtn').disabled = false;
+  $('#paperRow').style.display = pdf ? 'none' : '';
+  $('#paperHint').textContent = pdf ? 'Each PDF page keeps its original paper size. Print at 100% / "Actual size".'
+    : 'The PDF stretches the template to fill the page, so print it at 100% / "Actual size".';
+  st.dirty = false;
+}
+
+// park the open page's colors and history so another page can be shown
+function stashPage() {
+  const pg = st.pages[st.page];
+  if (!pg) return;
+  if (pg.touched) {
+    const c = document.createElement('canvas'); c.width = st.W; c.height = st.H;
+    c.getContext('2d').drawImage(colorCanvas, 0, 0);
+    pg.color = c;
+  }
+  pg.undo = st.undo; pg.redo = st.redo;
+  updateThumb(st.page);
+}
+
+async function showPage(i) {
+  if (i === st.page || i < 0 || i >= st.pages.length) return;
+  stashPage();
+  await busy(st.pages.length > 1 ? `Opening page ${i + 1}…` : 'Analyzing template…', async () => {
+    const src = await pageSource(i), pg = st.pages[i];
+    st.page = i;
+    st.src = src; st.W = src.width; st.H = src.height; st.N = st.W * st.H;
+    analyze();
+    build();
+    ensureColorLayer(pg.color);
+    st.undo = pg.undo; st.redo = pg.redo;
+    st.undoBytes = st.undo.reduce((a, u) => a + u.data.length, 0);
+    updateUndoButtons();
+    fitView();
+  });
+  renderPageList();
+}
+
+function renderPageList() {
+  const n = st.pages.length, list = $('#pageList');
+  $('#pagesSec').hidden = n < 2;
+  $('#pageInfo').textContent = n ? `${st.page + 1} / ${n}` : '';
+  list.innerHTML = '';
+  st.pages.forEach((pg, i) => {
+    const b = document.createElement('button');
+    b.className = 'pg' + (i === st.page ? ' on' : '') + (pg.touched ? ' touched' : '');
+    b.title = 'Page ' + (i + 1);
+    if (!pg.thumb) { pg.thumb = document.createElement('canvas'); updateThumb(i); }
+    b.append(pg.thumb, Object.assign(document.createElement('span'), { textContent: i + 1 }));
+    b.onclick = () => showPage(i);
+    list.appendChild(b);
+  });
+  updateStatus();
+}
+
+// thumbnail = page lines multiplied over its colors
+function updateThumb(i) {
+  const pg = st.pages[i]; if (!pg || !pg.thumb) return;
+  const t = pg.thumb, w = pg.base.width, h = pg.base.height;
+  if (t.width !== w || t.height !== h) { t.width = w; t.height = h; }
+  const x = t.getContext('2d');
+  x.globalCompositeOperation = 'source-over'; x.fillStyle = '#fff'; x.fillRect(0, 0, w, h);
+  const color = i === st.page ? colorCanvas : pg.color;
+  if (color) x.drawImage(color, 0, 0, w, h);
+  x.globalCompositeOperation = 'multiply'; x.drawImage(pg.base, 0, 0);
+  x.globalCompositeOperation = 'source-over';
+}
+let thumbTimer = 0;
+function markTouched() {
+  const pg = st.pages[st.page]; if (!pg) return;
+  if (!pg.touched) { pg.touched = true; renderPageList(); }
+  clearTimeout(thumbTimer); thumbTimer = setTimeout(() => updateThumb(st.page), 400);
+}
+
+// ---------- line analysis ----------
+function gaussBlur(src, w, h, sigma) {
+  const r = Math.ceil(sigma * 3), k = [];
+  let s = 0;
+  for (let i = -r; i <= r; i++) { const v = Math.exp(-i * i / (2 * sigma * sigma)); k.push(v); s += v; }
+  for (let i = 0; i < k.length; i++) k[i] /= s;
+  const tmp = new Float32Array(w * h), out = new Float32Array(w * h);
+  for (let y = 0; y < h; y++) {
+    const row = y * w;
+    for (let x = 0; x < w; x++) {
+      let a = 0;
+      for (let j = -r; j <= r; j++) a += src[row + clamp(x + j, 0, w - 1)] * k[j + r];
+      tmp[row + x] = a;
+    }
+  }
+  for (let y = 0; y < h; y++) {
+    for (let j = -r; j <= r; j++) {
+      const sr = clamp(y + j, 0, h - 1) * w, kk = k[j + r], row = y * w;
+      for (let x = 0; x < w; x++) out[row + x] += tmp[sr + x] * kk;
+    }
+  }
+  return out;
+}
+
+function max3(src, w, h) {
+  const tmp = new Float32Array(w * h), out = new Float32Array(w * h);
+  for (let y = 0; y < h; y++) {
+    const row = y * w;
+    for (let x = 0; x < w; x++) {
+      let m = src[row + x];
+      if (x > 0 && src[row + x - 1] > m) m = src[row + x - 1];
+      if (x < w - 1 && src[row + x + 1] > m) m = src[row + x + 1];
+      tmp[row + x] = m;
+    }
+  }
+  for (let y = 0; y < h; y++) {
+    const row = y * w, up = y > 0 ? row - w : row, dn = y < h - 1 ? row + w : row;
+    for (let x = 0; x < w; x++) out[row + x] = Math.max(tmp[up + x], tmp[row + x], tmp[dn + x]);
+  }
+  return out;
+}
+
+// Lines in low-res templates are ~1px and anti-aliased, so a single pixel's darkness doesn't
+// say whether it's an outline or a fold line. Blurring spreads each line into a consistent
+// profile whose peak height reflects the line's total ink: outlines peak about twice as high as folds.
+// This is only used to find part edges for filling; the template itself is shown untouched.
+function analyze() {
+  const { W: w, H: h } = st;
+  const d = st.src.getContext('2d').getImageData(0, 0, w, h).data;
+  const ink = new Float32Array(w * h);
+  for (let i = 0, p = 0; i < ink.length; i++, p += 4) ink[i] = 255 - (0.299 * d[p] + 0.587 * d[p + 1] + 0.114 * d[p + 2]);
+  st.B = gaussBlur(ink, w, h, 0.8);
+  st.ink = ink; st.inkMax = max3(ink, w, h);
+  const M = max3(st.B, w, h);
+
+  // histogram of ridge peaks, split in two with Otsu's method
+  const hist = new Float64Array(256);
+  let n = 0;
+  for (let i = 0; i < ink.length; i++) {
+    const b = st.B[i];
+    if (b > 15 && b >= M[i]) { hist[Math.min(255, Math.round(b))]++; n++; }
+  }
+  let sum = 0; for (let i = 0; i < 256; i++) sum += i * hist[i];
+  let wB = 0, sB = 0, best = 0, t = 80;
+  for (let i = 0; i < 256; i++) {
+    wB += hist[i]; if (!wB) continue;
+    const wF = n - wB; if (!wF) break;
+    sB += i * hist[i];
+    const mB = sB / wB, mF = (sum - sB) / wF, between = wB * wF * (mB - mF) ** 2;
+    if (between > best) { best = between; t = i; }
+  }
+  let lo = 0, lc = 0, hi = 0, hc = 0;
+  for (let i = 0; i < 256; i++) { if (i <= t) { lo += i * hist[i]; lc += hist[i]; } else { hi += i * hist[i]; hc += hist[i]; } }
+  st.foldMean = lc ? lo / lc : 0; st.outlineMean = hc ? hi / hc : 0;
+  st.hasFolds = n > 0 && lc > 0.03 * n && hc > 0.03 * n && st.outlineMean / st.foldMean > 1.45;
+  if (!st.hasFolds) st.outlineMean = n ? sum / n : 110;
+  st.split = st.hasFolds ? t + 0.5 : 1;
+  $('#detectInfo').textContent = n === 0 ? 'No lines found in this image.' :
+    st.hasFolds ? 'Found outlines and fold lines.' : 'Found outlines only, no separate fold lines.';
+}
+
+// set up buffers and show the template exactly as loaded
+function build() {
+  st.mask = new Uint8Array(st.N); st.maskBB = null;
+  st.walls = null; st.wallsKey = '';
+  stage.style.width = st.W + 'px'; stage.style.height = st.H + 'px';
+  lineCanvas.width = st.W; lineCanvas.height = st.H;
+  lineCanvas.getContext('2d').drawImage(st.src, 0, 0);
+  updateStatus();
+}
+
+// ---------- color layer ----------
+function resetColorLayer() {
+  st.undo = []; st.redo = []; st.undoBytes = 0; updateUndoButtons();
+  st.colorData = null;
+}
+function ensureColorLayer(prevCanvas) {
+  colorCanvas.width = st.W; colorCanvas.height = st.H;
+  colorCtx = colorCanvas.getContext('2d', { willReadFrequently: true });
+  if (prevCanvas) {
+    colorCtx.imageSmoothingEnabled = false;
+    colorCtx.drawImage(prevCanvas, 0, 0, st.W, st.H);
+  }
+  st.colorData = colorCtx.getImageData(0, 0, st.W, st.H);
+  st.c32 = new Uint32Array(st.colorData.data.buffer);
+}
+
+// ---------- walls & region finding ----------
+function wallThresholds() {
+  const split = st.split;
+  const any = Math.max(10, 0.45 * (st.hasFolds ? st.foldMean : st.outlineMean));
+  return { any, outline: st.hasFolds ? Math.max(any, split) : any };
+}
+function getWalls(stopAtFolds) {
+  const gap = +$('#gap').value, th = wallThresholds();
+  const thr = stopAtFolds ? th.any : th.outline;
+  const key = `${thr}|${gap}`;
+  if (st.wallsKey === key) return st.walls;
+  const { W, H, N, B, ink, inkMax } = st;
+  // The blur marks everything near a line as wall, which also seals strips only a pixel or two wide.
+  // So a pixel is only a wall if it is also part of a line's core: at least half as dark as its darkest
+  // neighbour, or as dark as a typical fold line pixel (so folds still hold where they meet an outline).
+  // The faint anti-aliased pixels beside a line, and the light pixels inside a thin strip, stay fillable.
+  const core = 0.5 * (st.hasFolds ? st.foldMean : st.outlineMean);
+  const base = new Uint8Array(N);
+  for (let i = 0; i < N; i++) base[i] = B[i] > thr && (ink[i] * 2 >= inkMax[i] || ink[i] >= core) ? 1 : 0;
+  let dil = base;
+  const r = gap;
+  if (r > 0) {
+    // square dilation via sliding-window counts, horizontal then vertical
+    const hz = new Uint8Array(N);
+    for (let y = 0; y < H; y++) {
+      const row = y * W; let c = 0;
+      for (let x = 0; x <= Math.min(r, W - 1); x++) c += base[row + x];
+      for (let x = 0; x < W; x++) {
+        hz[row + x] = c > 0 ? 1 : 0;
+        if (x - r >= 0) c -= base[row + x - r];
+        if (x + r + 1 < W) c += base[row + x + r + 1];
+      }
+    }
+    dil = new Uint8Array(N);
+    const cnt = new Int32Array(W);
+    for (let y = 0; y <= Math.min(r, H - 1); y++) for (let x = 0; x < W; x++) cnt[x] += hz[y * W + x];
+    for (let y = 0; y < H; y++) {
+      const row = y * W;
+      for (let x = 0; x < W; x++) dil[row + x] = cnt[x] > 0 ? 1 : 0;
+      if (y - r >= 0) { const o = (y - r) * W; for (let x = 0; x < W; x++) cnt[x] -= hz[o + x]; }
+      if (y + r + 1 < H) { const o = (y + r + 1) * W; for (let x = 0; x < W; x++) cnt[x] += hz[o + x]; }
+    }
+  }
+  st.walls = { base, dil, r }; st.wallsKey = key;
+  return st.walls;
+}
+
+function scanFill(seed, blocked, mask) {
+  const { W, H } = st;
+  let x0 = W, y0 = H, x1 = -1, y1 = -1;
+  const stack = [seed];
+  while (stack.length) {
+    const s = stack.pop();
+    if (mask[s] || blocked[s]) continue;
+    const y = (s / W) | 0, row = y * W;
+    let l = s - row, r = l;
+    while (l > 0 && !blocked[row + l - 1] && !mask[row + l - 1]) l--;
+    while (r < W - 1 && !blocked[row + r + 1] && !mask[row + r + 1]) r++;
+    mask.fill(1, row + l, row + r + 1);
+    if (l < x0) x0 = l; if (r > x1) x1 = r; if (y < y0) y0 = y; if (y > y1) y1 = y;
+    for (let ny = y - 1; ny <= y + 1; ny += 2) {
+      if (ny < 0 || ny >= H) continue;
+      const nr = ny * W; let run = false;
+      for (let x = l; x <= r; x++) {
+        const j = nr + x, open = !blocked[j] && !mask[j];
+        if (open && !run) { stack.push(j); run = true; } else if (!open) run = false;
+      }
+    }
+  }
+  return { x0, y0, x1, y1 };
+}
+
+// grow the mask outward `iters` steps, only into pixels where walls[j] === want
+function grow(mask, bb, iters, walls, want) {
+  const { W, H } = st;
+  let front = [];
+  for (let y = bb.y0; y <= bb.y1; y++) {
+    for (let x = bb.x0, i = y * W + x; x <= bb.x1; x++, i++) {
+      if (mask[i] && ((x > 0 && !mask[i - 1]) || (x < W - 1 && !mask[i + 1]) || (y > 0 && !mask[i - W]) || (y < H - 1 && !mask[i + W]))) front.push(i);
+    }
+  }
+  for (let it = 0; it < iters && front.length; it++) {
+    const next = [];
+    for (const i of front) {
+      const x = i % W, y = (i / W) | 0;
+      const nb = [x > 0 ? i - 1 : -1, x < W - 1 ? i + 1 : -1, y > 0 ? i - W : -1, y < H - 1 ? i + W : -1];
+      for (const j of nb) {
+        if (j < 0 || mask[j] || walls[j] !== want) continue;
+        mask[j] = 1; next.push(j);
+        const jx = j % W, jy = (j / W) | 0;
+        if (jx < bb.x0) bb.x0 = jx; if (jx > bb.x1) bb.x1 = jx; if (jy < bb.y0) bb.y0 = jy; if (jy > bb.y1) bb.y1 = jy;
+      }
+    }
+    front = next;
+  }
+}
+
+// returns {bb} with st.mask set for the part under (px,py), or {err}
+function findRegion(px, py, stopAtFolds) {
+  const { W, H } = st;
+  const walls = getWalls(stopAtFolds);
+  px = Math.floor(px); py = Math.floor(py);  // fractional pixel indices would make scanFill loop forever
+  let i = py * W + px;
+  if (walls.base[i]) return { err: 'line' };
+  if (walls.dil[i]) {
+    const r = walls.r + 2; let best = -1, bd = Infinity;
+    for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) {
+      const x = px + dx, y = py + dy;
+      if (x < 0 || y < 0 || x >= W || y >= H) continue;
+      const j = y * W + x, dd = dx * dx + dy * dy;
+      if (!walls.dil[j] && dd < bd) { bd = dd; best = j; }
+    }
+    if (best < 0) return { err: 'line' };
+    i = best;
+  }
+  const mask = st.mask;
+  if (st.maskBB) {
+    const b = st.maskBB;
+    for (let y = b.y0; y <= b.y1; y++) mask.fill(0, y * W + b.x0, y * W + b.x1 + 1);
+  }
+  const bb = scanFill(i, walls.dil, mask);
+  const edge = bb.x0 === 0 || bb.y0 === 0 || bb.x1 === W - 1 || bb.y1 === H - 1;
+  if (walls.r) grow(mask, bb, walls.r + 1, walls.base, 0);
+  grow(mask, bb, 2, walls.base, 1);
+  st.maskBB = bb;
+  return { bb, edge };
+}
+
+// ---------- undo ----------
+function copyRect(x, y, w, h) {
+  const d = st.colorData.data, W = st.W, out = new Uint8ClampedArray(w * h * 4);
+  for (let r = 0; r < h; r++) out.set(d.subarray(((y + r) * W + x) * 4, ((y + r) * W + x + w) * 4), r * w * 4);
+  return out;
+}
+function pasteRect(e) {
+  const d = st.colorData.data, W = st.W;
+  for (let r = 0; r < e.h; r++) d.set(e.data.subarray(r * e.w * 4, (r + 1) * e.w * 4), ((e.y + r) * W + e.x) * 4);
+  colorCtx.putImageData(st.colorData, 0, 0, e.x, e.y, e.w, e.h);
+}
+function pushUndo(x, y, w, h, data) {
+  st.undo.push({ x, y, w, h, data }); st.undoBytes += data.length;
+  st.redo = []; markTouched();
+  while (st.undoBytes > UNDO_LIMIT && st.undo.length > 1) st.undoBytes -= st.undo.shift().data.length;
+  st.dirty = true; updateUndoButtons();
+}
+function undoRedo(from, to) {
+  const e = from.pop(); if (!e) return;
+  const cur = { x: e.x, y: e.y, w: e.w, h: e.h, data: copyRect(e.x, e.y, e.w, e.h) };
+  pasteRect(e); to.push(cur); markTouched();
+  st.undoBytes = st.undo.reduce((a, u) => a + u.data.length, 0);
+  st.dirty = true; updateUndoButtons();
+}
+function updateUndoButtons() {
+  $('#undoBtn').disabled = !st.undo.length; $('#redoBtn').disabled = !st.redo.length;
+}
+
+// ---------- tool actions ----------
+function curColor32() { const [r, g, b] = hexToRgb(st.color); return pack(r, g, b); }
+
+function doFill(px, py, e, clear) {
+  const stop = $('#stopFolds').checked !== (e.ctrlKey || e.metaKey);
+  const res = findRegion(px, py, stop);
+  if (res.err) { toast('That spot is on a line. Click inside a part.'); return; }
+  if (res.edge && !e.shiftKey) { toast('That area is outside the parts. Shift-click to fill it anyway.'); return; }
+  const { x0, y0, x1, y1 } = res.bb, w = x1 - x0 + 1, h = y1 - y0 + 1;
+  const val = clear ? 0 : curColor32(), { mask, c32, W } = st;
+  pushUndo(x0, y0, w, h, copyRect(x0, y0, w, h));
+  for (let y = y0; y <= y1; y++) for (let i = y * W + x0, e2 = y * W + x1; i <= e2; i++) if (mask[i]) c32[i] = val;
+  colorCtx.putImageData(st.colorData, 0, 0, x0, y0, w, h);
+  if (!clear) addRecent(st.color);
+}
+
+function doReplace(px, py) {
+  const { c32, N, W } = st;
+  const src = c32[py * W + px];
+  if (!(src >>> 24)) { toast('Click a part that already has a color.'); return; }
+  const from = src & 0xffffff, [r, g, b] = hexToRgb(st.color), to = (b << 16) | (g << 8) | r;
+  if (from === to) return;
+  let x0 = st.W, y0 = st.H, x1 = -1, y1 = -1;
+  for (let i = 0; i < N; i++) {
+    const v = c32[i];
+    if ((v >>> 24) && (v & 0xffffff) === from) {
+      const x = i % W, y = (i / W) | 0;
+      if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y;
+    }
+  }
+  const w = x1 - x0 + 1, h = y1 - y0 + 1;
+  pushUndo(x0, y0, w, h, copyRect(x0, y0, w, h));
+  for (let y = y0; y <= y1; y++) for (let i = y * W + x0, e = y * W + x1; i <= e; i++) {
+    const v = c32[i];
+    if ((v >>> 24) && (v & 0xffffff) === from) c32[i] = ((v & 0xff000000) | to) >>> 0;
+  }
+  colorCtx.putImageData(st.colorData, 0, 0, x0, y0, w, h);
+  addRecent(st.color);
+  toast('Replaced ' + rgbToHex(from & 255, (from >> 8) & 255, (from >> 16) & 255) + ' with ' + st.color.toUpperCase());
+}
+
+function doPick(px, py) {
+  const v = st.c32[py * st.W + px];
+  if (!(v >>> 24)) { toast('No color there yet.'); return; }
+  setColor(rgbToHex(v & 255, (v >> 8) & 255, (v >> 16) & 255));
+}
+
+// brush: strokes are drawn on a scratch canvas, masked to the part, then merged into the color layer
+let stroke = null;
+function brushStart(px, py, erase) {
+  const size = +$('#brushSize').value;
+  let bb = { x0: 0, y0: 0, x1: st.W - 1, y1: st.H - 1 }, clipped = false;
+  const mode = $('#brushMode').value;
+  if (mode === 'part' && px >= 0 && py >= 0 && px < st.W && py < st.H) {
+    const res = findRegion(Math.floor(px), Math.floor(py), $('#stopFolds').checked);
+    if (!res.err && !res.edge) { bb = { ...res.bb }; clipped = true; }
+  }
+  const w = bb.x1 - bb.x0 + 1, h = bb.y1 - bb.y0 + 1;
+  const preview = document.createElement('canvas'); preview.width = w; preview.height = h;
+  // clipped strokes are drawn off-screen and masked into the preview; unclipped ones draw on it directly
+  let scratch = preview;
+  if (clipped) { scratch = document.createElement('canvas'); scratch.width = w; scratch.height = h; }
+  preview.style.left = bb.x0 + 'px'; preview.style.top = bb.y0 + 'px';
+  if (erase) preview.style.opacity = .9;
+  else if (mode === 'lines') preview.style.opacity = .6;  // trimmed to the lines when the stroke ends
+  stage.insertBefore(preview, lineCanvas);
+  let maskCanvas = null;
+  if (clipped) {
+    maskCanvas = document.createElement('canvas'); maskCanvas.width = w; maskCanvas.height = h;
+    const mi = new ImageData(w, h), m32 = new Uint32Array(mi.data.buffer);
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) if (st.mask[(bb.y0 + y) * st.W + bb.x0 + x]) m32[y * w + x] = 0xff000000;
+    maskCanvas.getContext('2d').putImageData(mi, 0, 0);
+  }
+  const sctx = scratch.getContext('2d');
+  sctx.lineCap = sctx.lineJoin = 'round'; sctx.lineWidth = size;
+  sctx.strokeStyle = sctx.fillStyle = erase ? '#ffffff' : st.color;
+  sctx.translate(-bb.x0, -bb.y0);
+  stroke = { bb, w, h, scratch, sctx, preview, maskCanvas, erase, mode, pts: [[px, py]], last: [px, py], size,
+             sx0: px, sy0: py, sx1: px, sy1: py, raf: 0 };
+  sctx.beginPath(); sctx.arc(px, py, size / 2, 0, Math.PI * 2); sctx.fill();
+  brushPreview();
+}
+function brushMove(px, py) {
+  const s = stroke; if (!s) return;
+  s.sctx.beginPath(); s.sctx.moveTo(s.last[0], s.last[1]); s.sctx.lineTo(px, py); s.sctx.stroke();
+  s.last = [px, py]; s.pts.push([px, py]);
+  s.sx0 = Math.min(s.sx0, px); s.sy0 = Math.min(s.sy0, py); s.sx1 = Math.max(s.sx1, px); s.sy1 = Math.max(s.sy1, py);
+  if (!s.raf) s.raf = requestAnimationFrame(() => { s.raf = 0; brushPreview(s); });
+}
+function brushPreview(s = stroke) {
+  if (s.scratch === s.preview) return;
+  const p = s.preview.getContext('2d');
+  p.globalCompositeOperation = 'copy'; p.drawImage(s.scratch, 0, 0);
+  if (s.maskCanvas) { p.globalCompositeOperation = 'destination-in'; p.drawImage(s.maskCanvas, 0, 0); }
+}
+function brushEnd() {
+  const s = stroke; if (!s) return; stroke = null;
+  cancelAnimationFrame(s.raf); brushPreview(s);
+  const pad = Math.ceil(s.size / 2) + 2;
+  const x0 = clamp(Math.floor(s.sx0 - pad), s.bb.x0, s.bb.x1), y0 = clamp(Math.floor(s.sy0 - pad), s.bb.y0, s.bb.y1);
+  const x1 = clamp(Math.ceil(s.sx1 + pad), s.bb.x0, s.bb.x1), y1 = clamp(Math.ceil(s.sy1 + pad), s.bb.y0, s.bb.y1);
+  s.preview.remove();
+  if (x1 < x0 || y1 < y0) return;
+  const w = x1 - x0 + 1, h = y1 - y0 + 1;
+  if (s.mode === 'lines') trimToLines(s, x0, y0, w, h);
+  pushUndo(x0, y0, w, h, copyRect(x0, y0, w, h));
+  colorCtx.save();
+  colorCtx.globalCompositeOperation = s.erase ? 'destination-out' : 'source-over';
+  colorCtx.drawImage(s.preview, s.bb.x0, s.bb.y0);
+  colorCtx.restore();
+  const after = colorCtx.getImageData(x0, y0, w, h).data, d = st.colorData.data, W = st.W;
+  for (let r = 0; r < h; r++) d.set(after.subarray(r * w * 4, (r + 1) * w * 4), ((y0 + r) * W + x0) * 4);
+  if (!s.erase) addRecent(st.color);
+}
+
+// Keep only the parts of the stroke reachable from the brush path without crossing a line,
+// plus a couple of pixels into the lines themselves so no white seam is left against them.
+function trimToLines(s, x0, y0, w, h) {
+  const px = s.preview.getContext('2d'), ox = x0 - s.bb.x0, oy = y0 - s.bb.y0;
+  const img = px.getImageData(ox, oy, w, h), a = img.data;
+  const walls = getWalls($('#stopFolds').checked).base, W = st.W;
+  const keep = new Uint8Array(w * h), stack = [];
+  const open = j => a[j * 4 + 3] > 0 && !walls[(y0 + ((j / w) | 0)) * W + x0 + (j % w)];
+  for (const [fx, fy] of s.pts) {
+    const x = Math.floor(fx) - x0, y = Math.floor(fy) - y0;
+    if (x < 0 || y < 0 || x >= w || y >= h) continue;
+    const j = y * w + x;
+    if (!keep[j] && open(j)) { keep[j] = 1; stack.push(j); }
+  }
+  while (stack.length) {
+    const j = stack.pop(), x = j % w;
+    for (const k of [x > 0 ? j - 1 : -1, x < w - 1 ? j + 1 : -1, j - w, j + w]) {
+      if (k < 0 || k >= w * h || keep[k] || !open(k)) continue;
+      keep[k] = 1; stack.push(k);
+    }
+  }
+  for (let it = 0; it < 2; it++) {
+    const add = [];
+    for (let j = 0; j < w * h; j++) {
+      if (keep[j] || !a[j * 4 + 3]) continue;
+      const x = j % w;
+      if ((x > 0 && keep[j - 1] === 1) || (x < w - 1 && keep[j + 1] === 1) || (j >= w && keep[j - w] === 1) || (j + w < w * h && keep[j + w] === 1)) add.push(j);
+    }
+    for (const j of add) keep[j] = 1;
+  }
+  for (let j = 0; j < w * h; j++) if (!keep[j]) a[j * 4 + 3] = 0;
+  px.putImageData(img, ox, oy);
+}
+
+// ---------- view: pan & zoom ----------
+function applyView() {
+  const v = st.view;
+  stage.style.transform = `translate(${v.x}px, ${v.y}px) scale(${v.z})`;
+  stage.classList.toggle('pixelated', v.z >= 2);
+  $('#stZoom').textContent = st.W ? `Zoom ${Math.round(v.z * 100)}%` : '';
+}
+function fitView() {
+  if (!st.W) return;
+  const r = viewport.getBoundingClientRect();
+  const z = Math.min((r.width - 40) / st.W, (r.height - 40) / st.H);
+  st.view = { z, x: (r.width - st.W * z) / 2, y: (r.height - st.H * z) / 2 };
+  applyView();
+}
+function zoomAt(cx, cy, f) {
+  const v = st.view, z = clamp(v.z * f, 0.03, 16);
+  v.x = cx - (cx - v.x) * z / v.z; v.y = cy - (cy - v.y) * z / v.z; v.z = z;
+  applyView();
+}
+function toImage(e) {
+  const r = viewport.getBoundingClientRect(), v = st.view;
+  return [(e.clientX - r.left - v.x) / v.z, (e.clientY - r.top - v.y) / v.z];
+}
+
+let spaceDown = false, pan = null;
+viewport.addEventListener('wheel', e => {
+  if (!st.W) return; e.preventDefault();
+  const r = viewport.getBoundingClientRect();
+  zoomAt(e.clientX - r.left, e.clientY - r.top, Math.exp(-e.deltaY * (e.deltaMode ? 0.05 : 0.0015)));
+}, { passive: false });
+
+viewport.addEventListener('pointerdown', e => {
+  if (!st.W) return;
+  if (e.button === 1 || spaceDown || st.tool === 'hand') {
+    e.preventDefault();
+    pan = { sx: e.clientX, sy: e.clientY, vx: st.view.x, vy: st.view.y };
+    viewport.setPointerCapture(e.pointerId); viewport.style.cursor = 'grabbing';
+    return;
+  }
+  if (e.button !== 0) return;
+  const [fx, fy] = toImage(e), px = Math.floor(fx), py = Math.floor(fy);
+  const inside = px >= 0 && py >= 0 && px < st.W && py < st.H;
+  const tool = e.altKey ? 'pick' : st.tool;
+  if (tool === 'brush' || tool === 'eraser') {
+    brushStart(fx, fy, tool === 'eraser');
+    viewport.setPointerCapture(e.pointerId);
+    return;
+  }
+  if (!inside) return;
+  if (tool === 'fill' || tool === 'unfill') doFill(px, py, e, tool === 'unfill');
+  else if (tool === 'replace') doReplace(px, py);
+  else if (tool === 'pick') doPick(px, py);
+});
+viewport.addEventListener('pointermove', e => {
+  if (!st.W) return;
+  if (pan) {
+    st.view.x = pan.vx + e.clientX - pan.sx; st.view.y = pan.vy + e.clientY - pan.sy; applyView(); return;
+  }
+  const [fx, fy] = toImage(e);
+  if (stroke) brushMove(fx, fy);
+  $('#stPos').textContent = fx >= 0 && fy >= 0 && fx < st.W && fy < st.H ? `${Math.floor(fx)}, ${Math.floor(fy)}` : '';
+  updateBrushCursor(e);
+});
+const endPointer = () => { if (pan) { pan = null; updateCursor(); } if (stroke) brushEnd(); };
+viewport.addEventListener('pointerup', endPointer);
+viewport.addEventListener('pointercancel', endPointer);
+viewport.addEventListener('pointerleave', () => { $('#brushCursor').style.display = 'none'; });
+
+function updateBrushCursor(e) {
+  const c = $('#brushCursor');
+  if ((st.tool !== 'brush' && st.tool !== 'eraser') || spaceDown || !st.W) { c.style.display = 'none'; return; }
+  const r = viewport.getBoundingClientRect(), d = +$('#brushSize').value * st.view.z;
+  c.style.display = 'block'; c.style.width = c.style.height = Math.max(4, d) + 'px';
+  c.style.left = (e.clientX - r.left) + 'px'; c.style.top = (e.clientY - r.top) + 'px';
+}
+function updateCursor() {
+  viewport.style.cursor = spaceDown || st.tool === 'hand' ? 'grab' :
+    st.tool === 'brush' || st.tool === 'eraser' ? 'none' : 'crosshair';
+}
+
+// ---------- tools & keyboard ----------
+function setTool(t) {
+  st.tool = t;
+  document.querySelectorAll('#tools [data-tool]').forEach(b => b.classList.toggle('on', b.dataset.tool === t));
+  updateCursor();
+}
+document.querySelectorAll('#tools [data-tool]').forEach(b => b.addEventListener('click', () => setTool(b.dataset.tool)));
+
+const keyTools = { f: 'fill', u: 'unfill', r: 'replace', b: 'brush', e: 'eraser', i: 'pick', h: 'hand' };
+document.addEventListener('keydown', e => {
+  if (e.target.matches('input[type=text], input[type=number], select')) return;
+  const k = e.key.toLowerCase();
+  if ((e.ctrlKey || e.metaKey) && k === 'z') { e.preventDefault(); e.shiftKey ? undoRedo(st.redo, st.undo) : undoRedo(st.undo, st.redo); return; }
+  if ((e.ctrlKey || e.metaKey) && k === 'y') { e.preventDefault(); undoRedo(st.redo, st.undo); return; }
+  if (e.ctrlKey || e.metaKey || e.altKey) return;
+  if (e.code === 'Space') { e.preventDefault(); if (!spaceDown) { spaceDown = true; updateCursor(); $('#brushCursor').style.display = 'none'; } return; }
+  if (keyTools[k]) setTool(keyTools[k]);
+  else if (k === '0') fitView();
+  else if (e.key === 'PageDown') { e.preventDefault(); showPage(st.page + 1); }
+  else if (e.key === 'PageUp') { e.preventDefault(); showPage(st.page - 1); }
+  else if (k === '+' || k === '=') { const r = viewport.getBoundingClientRect(); zoomAt(r.width / 2, r.height / 2, 1.25); }
+  else if (k === '-') { const r = viewport.getBoundingClientRect(); zoomAt(r.width / 2, r.height / 2, 0.8); }
+  else if (k === '[' || k === ']') {
+    const s = $('#brushSize'); s.value = clamp(+s.value * (k === ']' ? 1.2 : 1 / 1.2), 2, 300); s.dispatchEvent(new Event('input'));
+  }
+});
+document.addEventListener('keyup', e => { if (e.code === 'Space') { spaceDown = false; updateCursor(); } });
+
+// ---------- color & palettes ----------
+function setColor(hex) {
+  st.color = hex.toLowerCase();
+  $('#colorInput').value = st.color; $('#hexInput').value = st.color.toUpperCase();
+  $('#curColor').style.background = st.color;
+  renderSwatches();
+}
+function renderSwatchList(el, list, removable) {
+  el.innerHTML = '';
+  list.forEach((hex, i) => {
+    const b = document.createElement('button');
+    b.className = 'swatch' + (hex.toLowerCase() === st.color ? ' on' : '');
+    b.style.background = hex; b.title = hex.toUpperCase();
+    b.onclick = () => setColor(hex);
+    if (removable) b.oncontextmenu = ev => { ev.preventDefault(); st.palette.splice(i, 1); savePaletteState(); renderSwatches(); };
+    el.appendChild(b);
+  });
+}
+function renderSwatches() {
+  renderSwatchList($('#palette'), st.palette, true);
+  const add = document.createElement('button'); add.className = 'swatch add'; add.textContent = '+'; add.title = 'Add current color';
+  add.onclick = addCurrentToPalette; $('#palette').appendChild(add);
+  renderSwatchList($('#recent'), st.recent, false);
+  $('#recentLabel').style.display = st.recent.length ? '' : 'none';
+}
+function addCurrentToPalette() {
+  if (!st.palette.includes(st.color)) { st.palette.push(st.color); savePaletteState(); renderSwatches(); }
+}
+function addRecent(hex) {
+  st.recent = [hex, ...st.recent.filter(h => h !== hex)].slice(0, 14);
+  lsSet('recolor.recent', st.recent); renderSwatches();
+}
+function savePaletteState() { lsSet('recolor.palette', st.palette); }
+function refreshSavedList() {
+  const saved = lsGet('recolor.palettes', {}), sel = $('#savedPalettes');
+  sel.innerHTML = '<option value="">Saved palettes…</option>';
+  Object.keys(saved).sort().forEach(n => { const o = document.createElement('option'); o.value = o.textContent = n; sel.appendChild(o); });
+}
+$('#colorInput').addEventListener('input', e => setColor(e.target.value));
+$('#hexInput').addEventListener('change', e => {
+  const v = e.target.value.trim().replace(/^#?/, '#');
+  if (/^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(v)) setColor(rgbToHex(...hexToRgb(v))); else e.target.value = st.color.toUpperCase();
+});
+$('#addSwatch').onclick = addCurrentToPalette;
+$('#curColor').onclick = () => $('#colorInput').click();
+$('#savePal').onclick = () => {
+  const n = $('#palName').value.trim(); if (!n) { toast('Give the palette a name first.'); return; }
+  const saved = lsGet('recolor.palettes', {}); saved[n] = st.palette.slice(); lsSet('recolor.palettes', saved);
+  refreshSavedList(); $('#savedPalettes').value = n; toast('Saved palette "' + n + '"');
+};
+$('#loadPal').onclick = () => {
+  const n = $('#savedPalettes').value, saved = lsGet('recolor.palettes', {});
+  if (!saved[n]) return;
+  st.palette = saved[n].slice(); savePaletteState(); $('#palName').value = n; renderSwatches();
+};
+$('#delPal').onclick = () => {
+  const n = $('#savedPalettes').value; if (!n || !confirm('Delete saved palette "' + n + '"?')) return;
+  const saved = lsGet('recolor.palettes', {}); delete saved[n]; lsSet('recolor.palettes', saved); refreshSavedList();
+};
+
+// ---------- reference image ----------
+const ref = { canvas: null, data: null, w: 0, h: 0, view: { x: 0, y: 0, z: 1 } };
+const refCanvas = $('#refCanvas');
+async function openReference(file) {
+  if (!file) return;
+  try { ref.canvas = await fileToCanvas(file); } catch (e) { toast('Could not open that image.'); return; }
+  ref.w = ref.canvas.width; ref.h = ref.canvas.height;
+  ref.data = ref.canvas.getContext('2d').getImageData(0, 0, ref.w, ref.h).data;
+  $('#refEmpty').style.display = 'none';
+  refFit();
+}
+function refSize() {
+  const r = refCanvas.getBoundingClientRect(), dpr = devicePixelRatio || 1;
+  if (refCanvas.width !== Math.round(r.width * dpr) || refCanvas.height !== Math.round(r.height * dpr)) {
+    refCanvas.width = Math.round(r.width * dpr); refCanvas.height = Math.round(r.height * dpr);
+  }
+  return r;
+}
+function refFit() {
+  if (!ref.canvas) return;
+  const r = refSize(), z = Math.min(r.width / ref.w, r.height / ref.h);
+  ref.view = { z, x: (r.width - ref.w * z) / 2, y: (r.height - ref.h * z) / 2 };
+  drawRef();
+}
+function drawRef() {
+  refSize();
+  const c = refCanvas.getContext('2d'), dpr = devicePixelRatio || 1, v = ref.view;
+  c.setTransform(1, 0, 0, 1, 0, 0); c.clearRect(0, 0, refCanvas.width, refCanvas.height);
+  if (!ref.canvas) return;
+  c.setTransform(dpr * v.z, 0, 0, dpr * v.z, dpr * v.x, dpr * v.y);
+  c.imageSmoothingEnabled = v.z < 2;
+  c.drawImage(ref.canvas, 0, 0);
+}
+function sampleRef(e) {
+  const r = refCanvas.getBoundingClientRect(), v = ref.view;
+  const x = Math.floor((e.clientX - r.left - v.x) / v.z), y = Math.floor((e.clientY - r.top - v.y) / v.z);
+  if (x < 0 || y < 0 || x >= ref.w || y >= ref.h) return null;
+  let R = 0, G = 0, B = 0, n = 0;
+  for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
+    const xx = x + dx, yy = y + dy; if (xx < 0 || yy < 0 || xx >= ref.w || yy >= ref.h) continue;
+    const p = (yy * ref.w + xx) * 4; R += ref.data[p]; G += ref.data[p + 1]; B += ref.data[p + 2]; n++;
+  }
+  return rgbToHex(R / n, G / n, B / n);
+}
+let refDrag = null;
+refCanvas.addEventListener('pointerdown', e => {
+  if (!ref.canvas) { $('#refFile').click(); return; }
+  refDrag = { sx: e.clientX, sy: e.clientY, vx: ref.view.x, vy: ref.view.y, moved: false };
+  refCanvas.setPointerCapture(e.pointerId);
+});
+refCanvas.addEventListener('pointermove', e => {
+  if (!ref.canvas) return;
+  if (refDrag) {
+    const dx = e.clientX - refDrag.sx, dy = e.clientY - refDrag.sy;
+    if (Math.abs(dx) + Math.abs(dy) > 4) refDrag.moved = true;
+    if (refDrag.moved) { ref.view.x = refDrag.vx + dx; ref.view.y = refDrag.vy + dy; drawRef(); refCanvas.style.cursor = 'grabbing'; }
+    return;
+  }
+  const hex = sampleRef(e), h = $('#refHover');
+  if (hex) { h.style.display = 'flex'; h.querySelector('i').style.background = hex; h.querySelector('span').textContent = hex; }
+  else h.style.display = 'none';
+});
+refCanvas.addEventListener('pointerup', e => {
+  if (refDrag && !refDrag.moved) { const hex = sampleRef(e); if (hex) setColor(hex); }
+  refDrag = null; refCanvas.style.cursor = '';
+});
+refCanvas.addEventListener('pointerleave', () => { $('#refHover').style.display = 'none'; });
+refCanvas.addEventListener('wheel', e => {
+  if (!ref.canvas) return; e.preventDefault();
+  const r = refCanvas.getBoundingClientRect(), v = ref.view, cx = e.clientX - r.left, cy = e.clientY - r.top;
+  const z = clamp(v.z * Math.exp(-e.deltaY * (e.deltaMode ? 0.05 : 0.0015)), 0.02, 32);
+  v.x = cx - (cx - v.x) * z / v.z; v.y = cy - (cy - v.y) * z / v.z; v.z = z; drawRef();
+}, { passive: false });
+new ResizeObserver(() => drawRef()).observe($('#refWrap'));
+$('#refFit').onclick = refFit;
+
+// k-means over a sample of the reference pixels
+$('#refExtract').onclick = () => {
+  if (!ref.data) { toast('Open a reference image first.'); return; }
+  const pts = [], step = Math.max(1, Math.floor(Math.sqrt(ref.w * ref.h / 6000)));
+  for (let y = 0; y < ref.h; y += step) for (let x = 0; x < ref.w; x += step) {
+    const p = (y * ref.w + x) * 4; if (ref.data[p + 3] < 128) continue; pts.push([ref.data[p], ref.data[p + 1], ref.data[p + 2]]);
+  }
+  const K = 8, d2 = (a, b) => (a[0] - b[0]) ** 2 + (a[1] - b[1]) ** 2 + (a[2] - b[2]) ** 2;
+  const cs = [pts[0]];
+  while (cs.length < K) {
+    let best = null, bd = -1;
+    for (let i = 0; i < pts.length; i += 3) { const m = Math.min(...cs.map(c => d2(c, pts[i]))); if (m > bd) { bd = m; best = pts[i]; } }
+    cs.push(best.slice());
+  }
+  let counts = [];
+  for (let it = 0; it < 12; it++) {
+    const acc = cs.map(() => [0, 0, 0, 0]);
+    for (const p of pts) {
+      let bi = 0, bd = Infinity;
+      for (let k = 0; k < K; k++) { const d = d2(cs[k], p); if (d < bd) { bd = d; bi = k; } }
+      const a = acc[bi]; a[0] += p[0]; a[1] += p[1]; a[2] += p[2]; a[3]++;
+    }
+    acc.forEach((a, k) => { if (a[3]) cs[k] = [a[0] / a[3], a[1] / a[3], a[2] / a[3]]; });
+    counts = acc.map(a => a[3]);
+  }
+  const order = cs.map((c, k) => ({ c, n: counts[k] })).filter(o => o.n > pts.length * 0.01).sort((a, b) => b.n - a.n);
+  let added = 0;
+  for (const { c } of order) {
+    if (st.palette.some(h => d2(hexToRgb(h), c) < 400)) continue;
+    st.palette.push(rgbToHex(...c).toLowerCase()); added++;
+  }
+  savePaletteState(); renderSwatches();
+  toast(added ? `Added ${added} colors to the palette. Right-click any you don't need.` : 'No new colors found.');
+};
+
+// ---------- settings wiring ----------
+$('#gap').addEventListener('input', e => { $('#gapVal').textContent = e.target.value + ' px'; });
+$('#brushSize').addEventListener('input', e => { $('#brushVal').textContent = Math.round(e.target.value) + ' px'; });
+
+function updateStatus() {
+  if (!st.W) return;
+  const dpi = Math.round(Math.max(st.W, st.H) / 11.69);
+  const pg = st.pages.length > 1 ? ` · page ${st.page + 1} of ${st.pages.length}` : '';
+  $('#stSize').textContent = `${st.name}${pg} · ${st.W}×${st.H} px · ≈${dpi} DPI on A4`;
+}
+
+// ---------- export ----------
+function composite(lines = lineCanvas, color = colorCanvas) {
+  const c = document.createElement('canvas'); c.width = lines.width; c.height = lines.height;
+  const x = c.getContext('2d');
+  x.fillStyle = '#fff'; x.fillRect(0, 0, c.width, c.height);
+  if (color) x.drawImage(color, 0, 0, c.width, c.height);
+  x.globalCompositeOperation = 'multiply'; x.drawImage(lines, 0, 0);
+  return c;
+}
+const toBlob = (c, type, q) => new Promise(r => c.toBlob(r, type, q));
+$('#exportBtn').onclick = e => { e.stopPropagation(); $('#exportMenu').classList.toggle('open'); };
+document.addEventListener('click', e => { if (!e.target.closest('#exportMenu')) $('#exportMenu').classList.remove('open'); });
+$('#expPng').onclick = () => busy('Exporting PNG…', async () => {
+  const suffix = st.pages.length > 1 ? '-page' + (st.page + 1) : '';
+  download(await toBlob(composite(), 'image/png'), st.name + suffix + '-colored.png');
+});
+$('#expPdf').onclick = () => busy('Building PDF…', async () => {
+  await loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js');
+  stashPage();
+  let doc = null;
+  for (let i = 0; i < st.pages.length; i++) {
+    $('#busyText').textContent = st.pages.length > 1 ? `Building PDF, page ${i + 1} of ${st.pages.length}…` : 'Building PDF…';
+    const pg = st.pages[i];
+    const img = i === st.page ? composite() : composite(await pageSource(i), pg.color);
+    // PDF pages keep their own size (in points); a single image is fitted to the chosen paper
+    let pw, ph, unit;
+    if (st.pdf) { pw = pg.ptW; ph = pg.ptH; unit = 'pt'; }
+    else {
+      [pw, ph] = { a4: [210, 297], letter: [215.9, 279.4], a3: [297, 420] }[$('#paper').value]; unit = 'mm';
+      if (img.width > img.height) [pw, ph] = [ph, pw];
+    }
+    const orientation = pw > ph ? 'landscape' : 'portrait';
+    if (!doc) doc = new jspdf.jsPDF({ orientation, unit, format: [pw, ph] });
+    else doc.addPage([pw, ph], orientation);
+    const k = Math.min(pw / img.width, ph / img.height), w = img.width * k, h = img.height * k;
+    doc.addImage(img.toDataURL('image/jpeg', 0.95), 'JPEG', (pw - w) / 2, (ph - h) / 2, w, h, undefined, 'FAST');
+  }
+  download(doc.output('blob'), st.name + '-colored.pdf'); st.dirty = false;
+});
+
+// ---------- file inputs, drag & drop, paste ----------
+$('#openTpl').onclick = $('#emptyOpen').onclick = () => $('#tplFile').click();
+$('#openRef').onclick = () => $('#refFile').click();
+$('#tplFile').onchange = e => { openTemplate(e.target.files[0]); e.target.value = ''; };
+$('#refFile').onchange = e => { openReference(e.target.files[0]); e.target.value = ''; };
+function dropZone(el, handler) {
+  el.addEventListener('dragover', e => { e.preventDefault(); el.classList.add('dragover'); });
+  el.addEventListener('dragleave', () => el.classList.remove('dragover'));
+  el.addEventListener('drop', e => {
+    e.preventDefault(); e.stopPropagation(); el.classList.remove('dragover');
+    const f = e.dataTransfer.files[0]; if (f) handler(f);
+  });
+}
+dropZone(viewport, openTemplate);
+dropZone($('#refWrap'), openReference);
+document.addEventListener('paste', e => {
+  const item = [...(e.clipboardData?.items || [])].find(i => i.type.startsWith('image/'));
+  if (!item) return;
+  const f = item.getAsFile();
+  st.W ? openReference(f) : openTemplate(f);
+});
+$('#undoBtn').onclick = () => undoRedo(st.undo, st.redo);
+$('#redoBtn').onclick = () => undoRedo(st.redo, st.undo);
+$('#fitBtn').onclick = fitView;
+window.addEventListener('resize', () => { if (st.W) applyView(); });
+window.addEventListener('beforeunload', e => { if (st.dirty) { e.preventDefault(); e.returnValue = ''; } });
+
+// ---------- init ----------
+st.palette = lsGet('recolor.palette', ['#f2f2ee', '#c9ccd1', '#5a5f66', '#2a2c30', '#1f4fa8', '#c8202f', '#f2c230']);
+st.recent = lsGet('recolor.recent', []);
+refreshSavedList();
+setColor(st.color);
+setTool('fill');
+$('#gapVal').textContent = '0 px';
+</script>
+</body>
+</html>
